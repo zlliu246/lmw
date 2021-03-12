@@ -28,6 +28,15 @@ driver.get(url)
 
 sleep(2)
 
+# GETTING DATE
+try:
+    date = driver.find_element_by_class_name("sd-date-input")
+    date = date.find_element_by_tag_name("input").get_attribute("value")
+    print("Date:", date)
+
+except:
+    print("Date NOT FOUND")
+
 thead = driver.find_element_by_class_name("sd-head")
 
 header = []
@@ -80,6 +89,9 @@ for row in body:
 DELIMITER = "\t"
 
 with open("data.tsv", "w") as f:
+
+    f.write("Date: " + str(date) + "\n\n")
+
     for segment in [header, new]:
         for row in segment:
             print("len of row",len(row))
