@@ -1,7 +1,8 @@
+# xattr -d com.apple.quarantine /usr/local/bin/chromedriver
+
 import pandas as pd
 from time import sleep
 from selenium import webdriver
-
 import os
 
 with open(".env") as f:
@@ -26,9 +27,45 @@ url = "https://myota.tradingacademy.com/MastermindCommunity/MastermindLevelsV2"
 
 driver.get(url)
 
-sleep(2)
+sleep(4)
 
-# GETTING DATE
+headers = [header.text.strip() for header in driver.find_elements_by_class_name("sd-market")]
+
+print("headers:", headers, len(headers))
+print()
+
+
+raw = []
+
+zoneclassnames = ["sdzone-SZ03", "sdzone-SZ02", "sdzone-SZ01", "sdzone-DZ01", "sdzone-DZ02", "sdzone-DZ03"]
+
+for classname in zoneclassnames:
+    row = [z.text for z in driver.find_elements_by_class_name(classname)]
+    raw.append(row)
+
+data = []
+for row in raw:
+    up, down = [], []
+    for val in row:
+        try:
+            a,b = val.split("\n")
+            up.append(a)
+            down.append(b)
+
+        except:
+            up.append("ERROR")
+            down.append("ERROR")
+    up = up[:len(headers)]
+    down = down[:len(headers)]
+
+    data.extend([up,down])
+    
+data = pd.DataFrame(data)
+data.columns = headers
+
+print(data)
+
+date = ""
 try:
     date = driver.find_element_by_class_name("sd-date-input")
     date = date.find_element_by_tag_name("input").get_attribute("value")
@@ -37,68 +74,9 @@ try:
 except:
     print("Date NOT FOUND")
 
-thead = driver.find_element_by_class_name("sd-head")
+data.to_csv(f"data {date}.csv", index=False)
 
-header = []
-
-for tr in thead.find_elements_by_tag_name("tr"):
-
-    header.append([])
-
-    for th in tr.find_elements_by_tag_name("th"):
-
-        header[-1].append(th.text)
-
-tbody = driver.find_element_by_class_name("sd-body")
-
-body = []
-
-for tr in tbody.find_elements_by_tag_name("tr"):
-
-    body.append([])
-
-    for th in tr.find_elements_by_tag_name("th"):
-        body[-1].append(th.text)
-
-    if len(body[-1]) > 0:
-        body.append([])
-
-    for td in tr.find_elements_by_tag_name("td"):
-        body[-1].append(td.text)
-
-new = []
-
-for row in body:
-
-    try:
-        a, b = [],[]
-        for item in row:
-            aa,bb = item.split("\n")
-            a.append(aa)
-            b.append(bb)
-        
-        new.append(a)
-        new.append(b)
-
-    except:
-        new.append(row)
-
-# for row in new:
-#     print(row)
-
-DELIMITER = "\t"
-
-with open("data.tsv", "w") as f:
-
-    f.write("Date: " + str(date) + "\n\n")
-
-    for segment in [header, new]:
-        for row in segment:
-            print("len of row",len(row))
-            string = DELIMITER.join(row).replace("-","0")
-            f.write(string + "\n")
-
-print("written to tsv")
-
+print("closing driver")
+sleep(2)
 driver.close()
 
